@@ -25,7 +25,7 @@ def get_best_column(energy):
     dp[0, :] = energy[0, :]
 
     for i in range(1, n):
-        neighbours_left = np.append([INF], dp[i - 1][0:m - 1])
+        neighbours_left = np.append(INF, dp[i - 1][0:m - 1])
         neighbours_right = np.append(dp[i - 1][1:], INF)
         dp[i] = energy[i] + np.minimum(dp[i - 1], np.minimum(neighbours_left, neighbours_right))
 
@@ -59,6 +59,12 @@ def remove_columns(img, cnt):
     return img
 
 
+def remove_lines(img, cnt):
+    img = np.rot90(img, 3)
+    img = np.rot90(remove_columns(img, cnt))
+    return img
+
+
     
 # for dev only
 fig = plt.figure(figsize=(1, 2))
@@ -66,7 +72,7 @@ image = io.imread('castel.jpg')
 print(image.shape)
 fig.add_subplot(1, 2, 1);
 plt.imshow(image)
-image = remove_columns(image, 2)
+image = remove_lines(image, 20)
 print(image.shape)
 fig.add_subplot(1, 2, 2);
 plt.imshow(image)
