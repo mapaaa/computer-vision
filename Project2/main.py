@@ -5,8 +5,9 @@ import sys
 
 from matplotlib import pyplot as plt
 from scipy.ndimage import sobel
-from skimage import io
+from skimage import img_as_ubyte, io
 from skimage.color import rgb2gray
+from skimage.transform import rescale
 
 INF = 2 ** 62
 
@@ -108,17 +109,24 @@ def add_lines(img, cnt):
     return img
 
 
+def content_amplification(img, factor):
+    (n, m, c) = img.shape
+    img = img_as_ubyte(rescale(img, factor, mode = 'reflect', multichannel = True, anti_aliasing = True))
+    (new_n, new_m, new_c) = img.shape;
 
+    if new_n > n:
+        img = remove_lines(img, new_n - n)
+    if new_m > m:
+        img = remove_columns(img, new_m - m)
+    
+    return img
     
 # for dev only
 fig = plt.figure(figsize=(1, 2))
-image = io.imread('delfin.jpeg')
+image = io.imread('arcTriumf.jpg')
 fig.add_subplot(1, 2, 1);
 plt.imshow(image)
-image = add_columns(image, 25)
-image = add_lines(image, 25)
-image = add_columns(image, 25)
-image = add_lines(image, 25)
+image = content_amplification(image, 1.4)
 fig.add_subplot(1, 2, 2);
 plt.imshow(image)
 plt.show()
