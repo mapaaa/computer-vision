@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import numpy as np
+import random
 import sys
 
 from matplotlib import pyplot as plt
@@ -20,7 +21,7 @@ def compute_energy(img):
     return energy
 
 
-def get_best_column(energy):
+def get_best_column_dynamic_programming(energy):
     (n, m) = energy.shape
     dp = np.ndarray(energy.shape, dtype=energy.dtype)
     dp[0, :] = energy[0, :]
@@ -44,6 +45,21 @@ def get_best_column(energy):
     return column
 
 
+def get_best_column_random(energy):
+    (n, m) = energy.shape;
+    column = np.zeros(n, dtype = np.uint32)
+    column[0] = random.randrange(0, m)
+    for i in range(2, n):
+        prev_column = column[i - 1]
+        neighbours = [prev_column]
+        if prev_column - 1 >= 0:
+            neighbours.append(prev_column - 1)
+        if prev_column + 1 < m:
+            neighbours.append(prev_column + 1)
+        column[i] = random.choice(neighbours)
+    return column
+
+
 def remove_column(img, column):
     (n, m, c) = img.shape
     new_img = np.zeros((n, m - 1, c), dtype = np.uint8)
@@ -55,7 +71,7 @@ def remove_column(img, column):
 def remove_columns(img, cnt):
     for i in range(cnt):
         energy = compute_energy(img)
-        column = get_best_column(energy)
+        column = get_best_column_random(energy)
         img = remove_column(img, column)
     return img
 
@@ -123,10 +139,10 @@ def content_amplification(img, factor):
     
 # for dev only
 fig = plt.figure(figsize=(1, 2))
-image = io.imread('arcTriumf.jpg')
+image = io.imread('castel.jpg')
 fig.add_subplot(1, 2, 1);
 plt.imshow(image)
-image = content_amplification(image, 1.4)
+image = remove_columns(image, 50)
 fig.add_subplot(1, 2, 2);
 plt.imshow(image)
 plt.show()
