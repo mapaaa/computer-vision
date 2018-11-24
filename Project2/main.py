@@ -49,7 +49,7 @@ def get_best_column_random(energy):
     (n, m) = energy.shape;
     column = np.zeros(n, dtype = np.uint32)
     column[0] = random.randrange(0, m)
-    for i in range(2, n):
+    for i in range(1, n):
         prev_column = column[i - 1]
         neighbours = [prev_column]
         if prev_column - 1 >= 0:
@@ -57,6 +57,20 @@ def get_best_column_random(energy):
         if prev_column + 1 < m:
             neighbours.append(prev_column + 1)
         column[i] = random.choice(neighbours)
+    return column
+
+
+def get_best_column_greedy(energy):
+    (n, m) = energy.shape;
+    column = np.zeros(n, dtype = np.uint32)
+    column[0] = np.argmax(energy[0])
+    for i in range(1, n):
+        prev_column = column[i - 1]
+        column[i] = prev_column
+        if prev_column - 1 >= 0 and energy[i][prev_column - 1] < energy[i][column[i]]:
+            column[i] = prev_column - 1;
+        if prev_column + 1 < m and energy[i][prev_column + 1] < energy[i][column[i]]:
+            column[i] = prev_column + 1;
     return column
 
 
@@ -71,7 +85,7 @@ def remove_column(img, column):
 def remove_columns(img, cnt):
     for i in range(cnt):
         energy = compute_energy(img)
-        column = get_best_column_random(energy)
+        column = get_best_column_greedy(energy)
         img = remove_column(img, column)
     return img
 
