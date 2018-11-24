@@ -140,7 +140,7 @@ def add_lines(img, cnt):
     return img
 
 
-def content_amplification(img, factor):
+def amplify_content(img, factor):
     (n, m, c) = img.shape
     img = img_as_ubyte(rescale(img, factor, mode = 'reflect', multichannel = True, anti_aliasing = True))
     (new_n, new_m, new_c) = img.shape;
