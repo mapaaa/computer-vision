@@ -11,6 +11,7 @@ from skimage.color import rgb2gray
 from skimage.transform import rescale
 
 INF = 2 ** 62
+get_best_column = None
 
 def compute_energy(img):
     grayscale = rgb2gray(img)
@@ -21,7 +22,7 @@ def compute_energy(img):
     return energy
 
 
-def get_best_column_dynamic_programming(energy):
+def get_best_column_dynamicprogramming(energy):
     (n, m) = energy.shape
     dp = np.ndarray(energy.shape, dtype=energy.dtype)
     dp[0, :] = energy[0, :]
@@ -85,7 +86,7 @@ def remove_column(img, column):
 def remove_columns(img, cnt):
     for i in range(cnt):
         energy = compute_energy(img)
-        column = get_best_column_greedy(energy)
+        column = get_best_column(energy)
         img = remove_column(img, column)
     return img
 
@@ -151,12 +152,21 @@ def content_amplification(img, factor):
     
     return img
     
+
+
 # for dev only
 fig = plt.figure(figsize=(1, 2))
 image = io.imread('castel.jpg')
 fig.add_subplot(1, 2, 1);
+
 plt.imshow(image)
-image = remove_columns(image, 50)
+algorithm = 'dynamicprogramming'
+algorithms = {'dynamicprogramming': get_best_column_dynamicprogramming,
+              'greedy': get_best_column_greedy,
+              'random': get_best_column_random}
+get_best_column = algorithms[algorithm]
+
+image = add_columns(image, 50)
 fig.add_subplot(1, 2, 2);
 plt.imshow(image)
 plt.show()
