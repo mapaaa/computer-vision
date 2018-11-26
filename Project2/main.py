@@ -179,9 +179,11 @@ def amplify_content(img, factor):
 
 
 def get_coord(extents):
+    global viewer
     img = viewer.image
     global obj_coord
     obj_coord = np.int64(extents)
+    print(obj_coord)
 
 
 def remove_object(img, coord):
@@ -269,11 +271,13 @@ def main():
     seam_color = (255, 0, 0)
 
     if args.remove_rectangle:
+        global viewer
         viewer = ImageViewer(img)
         global obj_coord
         obj_coord = []
         rect_tool = RectangleTool(viewer, on_enter=get_coord)
         viewer.show()
+        print(obj_coord)
         img = remove_object(img, obj_coord)
 
     if args.width:
@@ -294,7 +298,7 @@ def main():
     plt.imshow(original_image)
     fig.add_subplot(1, 2, 2,)
     plt.imshow(img)
-    plt.show() #?
+    plt.show() # ?
 
 
 if __name__ == '__main__':
