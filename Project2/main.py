@@ -3,17 +3,34 @@
 import numpy as np
 import random
 import sys
+import time
 
 from matplotlib import pyplot as plt
 from scipy.ndimage import sobel
 from skimage import img_as_ubyte, io
-from skimage.color import rgb2gray
+from skimage.color import rgb2gray, gray2rgb
 from skimage.viewer import ImageViewer
 from skimage.viewer.canvastools import RectangleTool
 from skimage.transform import rescale
 
 INF = 2 ** 62
 get_best_column = None
+
+
+def plot_column(img, energy, column):
+    img_with_seam = img
+    (n, m, c) = img_with_seam.shape
+    global seam_color
+    for i in range(n):
+        img_with_seam[i][column[i]] = seam_color
+    fig = plt.figure()
+    fig.add_subplot(1, 2, 1)
+    plt.imshow(img_with_seam)
+    fig.add_subplot(1, 2, 2)
+    plt.imshow(energy, cmap = 'gray')
+    plt.pause(1.5)
+    plt.close()
+
 
 def compute_energy(img):
     grayscale = rgb2gray(img)
@@ -86,9 +103,12 @@ def remove_column(img, column):
 
     
 def remove_columns(img, cnt):
+    global plot_seam
     for i in range(cnt):
         energy = compute_energy(img)
         column = get_best_column(energy)
+        if plot_seam:
+            plot_column(img, energy, column)
         img = remove_column(img, column)
     return img
 
@@ -103,9 +123,12 @@ def add_columns(img, cnt):
     (n, m, c) = img.shape
     cp_img = img
     columns_to_be_added = np.array([], dtype = np.uint32).reshape(n, 0)
+    global plot_seam
     for i in range(cnt):
         energy = compute_energy(cp_img)
         column = get_best_column(energy)
+        if plot_seam:
+            plot_column(cp_img, energy, column)
         columns_to_be_added = np.hstack((columns_to_be_added, np.reshape(column, (n, 1))))
         cp_img = remove_column(cp_img, column)
 
@@ -178,18 +201,21 @@ def remove_object(img, coord):
         y2, x2 = n - x2 + 1, y2
         y1, y2 = y2, y1
 
-    print("Image Rotated: {0}".format(imgRotated))
     # Object's coordinates are considered [x1, x2) and [y1, y2)
     x2 += 1 
     y2 += 1
 
     cnt = y2 - y1
-    print(y1, y2)
+    global plot_seam
     for i in range(cnt):
         energy = compute_energy(img)
+        if plot_seam:
+            cp_energy = energy
         energy[x1:x2, :y1].fill(INF)
         energy[x1:x2, y2:].fill(INF)
         column = get_best_column(energy)
+        if plot_seam:
+            plot_column(img, cp_energy, column)
         img = remove_column(img, column)
         y2 -= 1
 
@@ -200,22 +226,25 @@ def remove_object(img, coord):
 
 
 # for dev only
-fig = plt.figure(figsize=(1, 2))
 image = io.imread('lac.jpg')
-fig.add_subplot(1, 2, 1);
-
-plt.imshow(image)
+original_image = image
 algorithm = 'dynamicprogramming'
 algorithms = {'dynamicprogramming': get_best_column_dynamicprogramming,
               'greedy': get_best_column_greedy,
               'random': get_best_column_random}
+plot_seam = True
+seam_color = (255, 0, 0)
 get_best_column = algorithms[algorithm]
-viewer= ImageViewer(image)
-coord = []
-rect_tool = RectangleTool(viewer, on_enter = get_coord)
-viewer.show()
-image = remove_object(image, coord)
+image = remove_columns(image, 10)
+# viewer= ImageViewer(image)
+# coord = []
+# rect_tool = RectangleTool(viewer, on_enter = get_coord)
+# viewer.show()
+# image = remove_object(image, coord)
 
+fig = plt.figure(figsize=(1, 2))
+fig.add_subplot(1, 2, 1);
+plt.imshow(original_image)
 
 fig.add_subplot(1, 2, 2);
 plt.imshow(image)
