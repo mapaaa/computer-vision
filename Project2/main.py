@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import numpy as np
 import random
 import sys
@@ -225,27 +226,64 @@ def remove_object(img, coord):
     return img
 
 
-# for dev only
-image = io.imread('lac.jpg')
-original_image = image
-algorithm = 'dynamicprogramming'
-algorithms = {'dynamicprogramming': get_best_column_dynamicprogramming,
+def main():
+    algorithms = {'dynamicprogramming': get_best_column_dynamicprogramming,
               'greedy': get_best_column_greedy,
               'random': get_best_column_random}
-plot_seam = True
-seam_color = (255, 0, 0)
-get_best_column = algorithms[algorithm]
-image = remove_columns(image, 10)
-# viewer= ImageViewer(image)
-# coord = []
-# rect_tool = RectangleTool(viewer, on_enter = get_coord)
-# viewer.show()
-# image = remove_object(image, coord)
+    default_algorithm = 'dynamicprogramming'
 
-fig = plt.figure(figsize=(1, 2))
-fig.add_subplot(1, 2, 1);
-plt.imshow(original_image)
+    parser = argparse.ArgumentParser(description = 'Content aware image resizing using seam carving.')    
+    parser.add_argument('source', type = str, help = 'Input picture to be resized.')
+    parser.add_argument('output', type = str, help = 'Output with the resized picture.')
+    parser.add_argument('--width', type = int, help = 'Change in width.')
+    parser.add_argument('--height', type = int, help = 'Change in height.')
+    parser.add_argument('--amplify-content', type = float, 
+        help = 'Amplify content with a desired factor. For example, use 1.2 to amplify the content with 20%.')
+    parser.add_argument('--remove-rectangle', action = 'store_true', help = 'Select rectangle objects to be removed.')
+    parser.add_argument('--algorithm', type = str, default = default_algorithm, choices = algorithms.keys(),
+            help = 'Strategy to be used for seam selection.')
+    parser.add_argument('--plot-result', action = 'store_true', help = 'Plots the original image and the resized one side by side')
+    parser.add_argument('--plot-seam', action = 'store_true', help = 'Select a color in RGB format and plots the seam at each step.')
 
-fig.add_subplot(1, 2, 2);
-plt.imshow(image)
-plt.show()
+    args = parser.parse_args()
+
+    img = io.imread(args.source)
+    original_image = img
+
+    global get_best_column
+    get_best_column = algorithms.get(args.algorithm, default_algorithm)
+
+    global plot_seam
+    plot_seam = args.plot_seam
+    seam_color = (255, 0, 0)
+
+    if args.remove_rectangle:
+        viewer = ImageViewer(img)
+        coord = []
+        rect_tool = RectangleTool(viewer, on_enter = get_coord)
+        viewer.show()
+        img = remove_object(img, coord)
+
+    if args.width:
+        if args.width < 0:
+            img = remove_column(img, -args.width)
+        else:
+            img = add_columns(img, args.width)
+
+    if args.height:
+        if args.height < 0:
+            img = remove_lines(img, -args.height)
+        else:
+            img = add_lines(img, args.height)
+
+    io.imsave(args.output, img)
+    fig = plt.figure(figsize=(1, 2))
+    fig.add_subplot(1, 2, 1);
+    plt.imshow(original_image)
+    fig.add_subplot(1, 2, 2,);
+    plt.imshow(img)
+    plt.show() #?
+
+
+if __name__ == '__main__':
+    sys.exit(main())
