@@ -183,7 +183,6 @@ def get_coord(extents):
     img = viewer.image
     global obj_coord
     obj_coord = np.int64(extents)
-    print(obj_coord)
 
 
 def remove_object(img, coord):
@@ -277,7 +276,6 @@ def main():
         obj_coord = []
         rect_tool = RectangleTool(viewer, on_enter=get_coord)
         viewer.show()
-        print(obj_coord)
         img = remove_object(img, obj_coord)
 
     if args.width:
@@ -293,12 +291,14 @@ def main():
             img = add_lines(img, args.height)
 
     io.imsave(args.output, img)
-    fig = plt.figure(figsize=(1, 2))
-    fig.add_subplot(1, 2, 1)
-    plt.imshow(original_image)
-    fig.add_subplot(1, 2, 2,)
-    plt.imshow(img)
-    plt.show() # ?
+
+    if args.plot_result:
+        fig = plt.figure(figsize=(1, 2))
+        fig.add_subplot(1, 2, 1)
+        plt.imshow(original_image)
+        fig.add_subplot(1, 2, 2,)
+        plt.imshow(img)
+        plt.show()
 
 
 if __name__ == '__main__':
