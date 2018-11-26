@@ -1,15 +1,14 @@
 #!/usr/bin/python3
 
 import argparse
-import numpy as np
 import random
 import sys
-import time
+import numpy as np
 
 from matplotlib import pyplot as plt
 from scipy.ndimage import sobel
 from skimage import img_as_ubyte, io
-from skimage.color import rgb2gray, gray2rgb
+from skimage.color import rgb2gray
 from skimage.viewer import ImageViewer
 from skimage.viewer.canvastools import RectangleTool
 from skimage.transform import rescale
@@ -28,7 +27,7 @@ def plot_column(img, energy, column):
     fig.add_subplot(1, 2, 1)
     plt.imshow(img_with_seam)
     fig.add_subplot(1, 2, 2)
-    plt.imshow(energy, cmap = 'gray')
+    plt.imshow(energy, cmap='gray')
     plt.pause(1.5)
     plt.close()
 
@@ -52,7 +51,7 @@ def get_best_column_dynamicprogramming(energy):
         neighbours_right = np.append(dp[i - 1][1:], INF)
         dp[i] = energy[i] + np.minimum(dp[i - 1], np.minimum(neighbours_left, neighbours_right))
 
-    column = np.zeros(n, dtype = np.uint32)
+    column = np.zeros(n, dtype=np.uint32)
     column[n - 1] = np.argmin(dp[n - 1])
     for i in range(n - 2, -1, -1):
         min_neighbour = dp[i][column[i + 1]]
@@ -67,8 +66,8 @@ def get_best_column_dynamicprogramming(energy):
 
 
 def get_best_column_random(energy):
-    (n, m) = energy.shape;
-    column = np.zeros(n, dtype = np.uint32)
+    (n, m) = energy.shape
+    column = np.zeros(n, dtype=np.uint32)
     column[0] = random.randrange(0, m)
     for i in range(1, n):
         prev_column = column[i - 1]
@@ -82,27 +81,27 @@ def get_best_column_random(energy):
 
 
 def get_best_column_greedy(energy):
-    (n, m) = energy.shape;
-    column = np.zeros(n, dtype = np.uint32)
+    (n, m) = energy.shape
+    column = np.zeros(n, dtype=np.uint32)
     column[0] = np.argmax(energy[0])
     for i in range(1, n):
         prev_column = column[i - 1]
         column[i] = prev_column
         if prev_column - 1 >= 0 and energy[i][prev_column - 1] < energy[i][column[i]]:
-            column[i] = prev_column - 1;
+            column[i] = prev_column - 1
         if prev_column + 1 < m and energy[i][prev_column + 1] < energy[i][column[i]]:
-            column[i] = prev_column + 1;
+            column[i] = prev_column + 1
     return column
 
 
 def remove_column(img, column):
     (n, m, c) = img.shape
-    new_img = np.zeros((n, m - 1, c), dtype = np.uint8)
+    new_img = np.zeros((n, m - 1, c), dtype=np.uint8)
     for i in range(n):
-        new_img[i] = np.concatenate((img[i][0:column[i]], img[i][column[i] + 1:m]), axis = 0)
+        new_img[i] = np.concatenate((img[i][0:column[i]], img[i][column[i] + 1:m]), axis=0)
     return new_img
 
-    
+
 def remove_columns(img, cnt):
     global plot_seam
     for i in range(cnt):
@@ -123,7 +122,7 @@ def remove_lines(img, cnt):
 def add_columns(img, cnt):
     (n, m, c) = img.shape
     cp_img = img
-    columns_to_be_added = np.array([], dtype = np.uint32).reshape(n, 0)
+    columns_to_be_added = np.array([], dtype=np.uint32).reshape(n, 0)
     global plot_seam
     for i in range(cnt):
         energy = compute_energy(cp_img)
@@ -133,25 +132,25 @@ def add_columns(img, cnt):
         columns_to_be_added = np.hstack((columns_to_be_added, np.reshape(column, (n, 1))))
         cp_img = remove_column(cp_img, column)
 
-    new_img = np.ndarray((n, m + cnt, 3), dtype = img.dtype) 
+    new_img = np.ndarray((n, m + cnt, 3), dtype=img.dtype)
     for i in range(n):
         new_row = img[i]
 
-        for j in range(cnt): 
+        for j in range(cnt):
             col = columns_to_be_added[i][j]
             if col - 1 >= 0:
-                new_col1 = np.mean(np.array([new_row[col - 1], new_row[col]]), axis = 0)
+                new_col1 = np.mean(np.array([new_row[col - 1], new_row[col]]), axis=0)
             else:
                 new_col1 = new_row[col]
 
             if col + 1 < len(new_row):
-                new_col2 = np.mean(np.array([new_row[col], new_row[col + 1]]), axis = 0)
+                new_col2 = np.mean(np.array([new_row[col], new_row[col + 1]]), axis=0)
             else:
                 new_col2 = new_row[col]
 
             new_col1 = np.reshape(new_col1, (1, c))
             new_col2 = np.reshape(new_col1, (1, c))
-            new_row = np.concatenate((new_row[:col], new_col1, new_col2, new_row[col + 1:])) 
+            new_row = np.concatenate((new_row[:col], new_col1, new_col2, new_row[col + 1:]))
 
             for k in range(j + 1, cnt):
                 if columns_to_be_added[i][k] >= col:
@@ -168,31 +167,30 @@ def add_lines(img, cnt):
 
 def amplify_content(img, factor):
     (n, m, c) = img.shape
-    img = img_as_ubyte(rescale(img, factor, mode = 'reflect', multichannel = True, anti_aliasing = True))
-    (new_n, new_m, new_c) = img.shape;
+    img = img_as_ubyte(rescale(img, factor, mode='reflect', multichannel=True, anti_aliasing=True))
+    (new_n, new_m, new_c) = img.shape
 
     if new_n > n:
         img = remove_lines(img, new_n - n)
     if new_m > m:
         img = remove_columns(img, new_m - m)
-    
+
     return img
-    
+
 
 def get_coord(extents):
-    global viewer
     img = viewer.image
-    global coord
-    coord = np.int64(extents)
+    global obj_coord
+    obj_coord = np.int64(extents)
 
 
-def remove_object(img, coord): 
+def remove_object(img, coord):
     (n, m, c) = img.shape
     imgRotated = False
-    x1 = coord[2];
-    x2 = coord[3];
-    y1 = coord[0];
-    y2 = coord[1];
+    x1 = coord[2]
+    x2 = coord[3]
+    y1 = coord[0]
+    y2 = coord[1]
 
     if x2 - x1 < y2 - y1:
         # Rotate the image because it's faster to remove lines than columns
@@ -203,12 +201,12 @@ def remove_object(img, coord):
         y1, y2 = y2, y1
 
     # Object's coordinates are considered [x1, x2) and [y1, y2)
-    x2 += 1 
+    x2 += 1
     y2 += 1
 
     cnt = y2 - y1
     global plot_seam
-    for i in range(cnt):
+    while (cnt):
         energy = compute_energy(img)
         if plot_seam:
             cp_energy = energy
@@ -219,6 +217,7 @@ def remove_object(img, coord):
             plot_column(img, cp_energy, column)
         img = remove_column(img, column)
         y2 -= 1
+        cnt -= 1
 
     if imgRotated:
         img = np.rot90(img)
@@ -228,22 +227,33 @@ def remove_object(img, coord):
 
 def main():
     algorithms = {'dynamicprogramming': get_best_column_dynamicprogramming,
-              'greedy': get_best_column_greedy,
-              'random': get_best_column_random}
+                  'greedy': get_best_column_greedy,
+                  'random': get_best_column_random}
     default_algorithm = 'dynamicprogramming'
 
-    parser = argparse.ArgumentParser(description = 'Content aware image resizing using seam carving.')    
-    parser.add_argument('source', type = str, help = 'Input picture to be resized.')
-    parser.add_argument('output', type = str, help = 'Output with the resized picture.')
-    parser.add_argument('--width', type = int, help = 'Change in width.')
-    parser.add_argument('--height', type = int, help = 'Change in height.')
-    parser.add_argument('--amplify-content', type = float, 
-        help = 'Amplify content with a desired factor. For example, use 1.2 to amplify the content with 20%.')
-    parser.add_argument('--remove-rectangle', action = 'store_true', help = 'Select rectangle objects to be removed.')
-    parser.add_argument('--algorithm', type = str, default = default_algorithm, choices = algorithms.keys(),
-            help = 'Strategy to be used for seam selection.')
-    parser.add_argument('--plot-result', action = 'store_true', help = 'Plots the original image and the resized one side by side')
-    parser.add_argument('--plot-seam', action = 'store_true', help = 'Select a color in RGB format and plots the seam at each step.')
+    parser = argparse.ArgumentParser(description='Content aware image resizing using seam carving.')
+    parser.add_argument('source', type=str, help='Input picture to be resized.')
+    parser.add_argument('output', type=str, help='Output with the resized picture.')
+    parser.add_argument('--width', type=int, help='Change in width.')
+    parser.add_argument('--height', type=int, help='Change in height.')
+    parser.add_argument('--amplify-content',
+                        type=float,
+                        help='Amplify content with a desired factor.' +
+                        'For example, use 1.2 to amplify the content with 20%.')
+    parser.add_argument('--remove-rectangle',
+                        action='store_true',
+                        help='Select rectangle objects to be removed.')
+    parser.add_argument('--algorithm',
+                        type=str,
+                        default=default_algorithm,
+                        choices=algorithms.keys(),
+                        help='Strategy to be used for seam selection.')
+    parser.add_argument('--plot-result',
+                        action='store_true',
+                        help='Plots the original image and the resized one side by side')
+    parser.add_argument('--plot-seam',
+                        action='store_true',
+                        help='Select a color in RGB format and plots the seam at each step.')
 
     args = parser.parse_args()
 
@@ -254,15 +264,17 @@ def main():
     get_best_column = algorithms.get(args.algorithm, default_algorithm)
 
     global plot_seam
+    global seam_color
     plot_seam = args.plot_seam
     seam_color = (255, 0, 0)
 
     if args.remove_rectangle:
         viewer = ImageViewer(img)
-        coord = []
-        rect_tool = RectangleTool(viewer, on_enter = get_coord)
+        global obj_coord
+        obj_coord = []
+        rect_tool = RectangleTool(viewer, on_enter=get_coord)
         viewer.show()
-        img = remove_object(img, coord)
+        img = remove_object(img, obj_coord)
 
     if args.width:
         if args.width < 0:
@@ -278,9 +290,9 @@ def main():
 
     io.imsave(args.output, img)
     fig = plt.figure(figsize=(1, 2))
-    fig.add_subplot(1, 2, 1);
+    fig.add_subplot(1, 2, 1)
     plt.imshow(original_image)
-    fig.add_subplot(1, 2, 2,);
+    fig.add_subplot(1, 2, 2,)
     plt.imshow(img)
     plt.show() #?
 
