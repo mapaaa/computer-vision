@@ -8,6 +8,8 @@ from matplotlib import pyplot as plt
 from scipy.ndimage import sobel
 from skimage import img_as_ubyte, io
 from skimage.color import rgb2gray
+from skimage.viewer import ImageViewer
+from skimage.viewer.canvastools import RectangleTool
 from skimage.transform import rescale
 
 INF = 2 ** 62
@@ -153,10 +155,53 @@ def amplify_content(img, factor):
     return img
     
 
+def get_coord(extents):
+    global viewer
+    img = viewer.image
+    global coord
+    coord = np.int64(extents)
+
+
+def remove_object(img, coord): 
+    (n, m, c) = img.shape
+    imgRotated = False
+    x1 = coord[2];
+    x2 = coord[3];
+    y1 = coord[0];
+    y2 = coord[1];
+
+    if x2 - x1 < y2 - y1:
+        # Rotate the image because it's faster to remove lines than columns
+        img = np.rot90(img, 3)
+        imgRotated = True
+        y1, x1 = n - x1 + 1, y1
+        y2, x2 = n - x2 + 1, y2
+        y1, y2 = y2, y1
+
+    print("Image Rotated: {0}".format(imgRotated))
+    # Object's coordinates are considered [x1, x2) and [y1, y2)
+    x2 += 1 
+    y2 += 1
+
+    cnt = y2 - y1
+    print(y1, y2)
+    for i in range(cnt):
+        energy = compute_energy(img)
+        energy[x1:x2, :y1].fill(INF)
+        energy[x1:x2, y2:].fill(INF)
+        column = get_best_column(energy)
+        img = remove_column(img, column)
+        y2 -= 1
+
+    if imgRotated:
+        img = np.rot90(img)
+
+    return img
+
 
 # for dev only
 fig = plt.figure(figsize=(1, 2))
-image = io.imread('castel.jpg')
+image = io.imread('lac.jpg')
 fig.add_subplot(1, 2, 1);
 
 plt.imshow(image)
@@ -165,8 +210,13 @@ algorithms = {'dynamicprogramming': get_best_column_dynamicprogramming,
               'greedy': get_best_column_greedy,
               'random': get_best_column_random}
 get_best_column = algorithms[algorithm]
+viewer= ImageViewer(image)
+coord = []
+rect_tool = RectangleTool(viewer, on_enter = get_coord)
+viewer.show()
+image = remove_object(image, coord)
 
-image = add_columns(image, 50)
+
 fig.add_subplot(1, 2, 2);
 plt.imshow(image)
 plt.show()
